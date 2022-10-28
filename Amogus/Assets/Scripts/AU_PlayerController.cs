@@ -36,24 +36,43 @@ public class AU_PlayerController : MonoBehaviour
 
     [SerializeField] GameObject bodyPrefab;
 
+    // репорт тела
+    public static List<Transform> allBodies;
 
+    List<Transform> bodiesFound;
+
+    [SerializeField] InputAction REPORT;
+    [SerializeField] LayerMask ignoreForBody;
+
+    //Interaction
+    [SerializeField] InputAction MOUSE;
+    Vector2 mousePositionInput;
+    Camera myCamera;
+    [SerializeField] InputAction INTERACTION;
+    [SerializeField] LayerMask interactLayer;
 
 
     private void Awake()
     {
         KILL.performed += KillTarget;
+        REPORT.performed += ReportBody;
+        INTERACTION.performed += Interact;
     }
 
     private void OnEnable() 
     {
         WASD.Enable();
         KILL.Enable();
+        REPORT.Enable();
+        MOUSE.Enable();
+        INTERACTION.Enable();
     }
 
     private void OnDisable()
     {
         WASD.Disable();
         KILL.Disable();
+        REPORT.Disable();
     }
     
 
@@ -76,6 +95,11 @@ public class AU_PlayerController : MonoBehaviour
         if (!hasControl)
             return;
         myAvatarSprite.color =  myColor;
+
+
+        allBodies = new List<Transform>();
+
+        bodiesFound = new List<Transform>();
     }
 
     // Update is called once per frame
@@ -84,12 +108,22 @@ public class AU_PlayerController : MonoBehaviour
         if (!hasControl)
             return;
 
+        // включаем анимацию бега при движении
         movementInput = WASD.ReadValue<Vector2>();
         myAnim.SetFloat("Speed", movementInput.magnitude);
         if (movementInput.x != 0)
         {
+            // поворачиваем спрайт на 180* если бежим в другую сторону
             myAvatar.localScale = new Vector2(Mathf.Sign(movementInput.x), 1);
         }
+
+        // если кл-во тел > 0, то включаем поиск тела
+        if(allBodies.Count > 0)
+        {
+            BodySearch();
+        }
+
+        mousePositionInput = MOUSE.ReadValue<Vector2>();
     }
 
     private void FixedUpdate() 
@@ -162,10 +196,70 @@ public class AU_PlayerController : MonoBehaviour
     private void Die()
     {
         isDead = true;
+
         myAnim.SetBool("isDead", isDead);
         myCollider.enabled = false;
+        gameObject.layer = 9;
 
         AU_Body tempBody = Instantiate(bodyPrefab, transform.position, transform.rotation).GetComponent<AU_Body>();
         tempBody.SetColor(myAvatarSprite.color);
+    }
+
+    void BodySearch()
+    {
+        foreach(Transform body in allBodies)
+        {
+            RaycastHit hit;
+            Ray ray = new Ray(transform.position, body.position - transform.position);
+            Debug.DrawRay(transform.position, body.position - transform.position, Color.cyan);
+            if(Physics.Raycast(ray, out hit, 1000f, ~ignoreForBody))
+            {
+
+                if(hit.transform == body)
+                {
+                    //Debug.Log(hit.transform.name);
+                    //Debug.Log(bodiesFound.Count);
+                    if (bodiesFound.Contains(body.transform))
+                        return;
+                    bodiesFound.Add(body.transform);
+                }
+                else
+                {
+                    bodiesFound.Remove(body.transform);
+                }
+            }
+        }
+    }
+
+    private void ReportBody(InputAction.CallbackContext obj)
+    {
+        if (bodiesFound == null)
+            return;
+        if (bodiesFound.Count == 0)
+            return;
+        Transform tempBody = bodiesFound[bodiesFound.Count - 1];
+        allBodies.Remove(tempBody);
+        bodiesFound.Remove(tempBody);
+        tempBody.GetComponent<AU_Body>().Report();
+    }
+
+    void Interact(InputAction.CallbackContext context)
+    {
+        if (context.phase == InputActionPhase.Performed)
+        {
+            //Debug.Log("Here");
+            RaycastHit hit;
+            Ray ray = myCamera.ScreenPointToRay(mousePositionInput);
+            if (Physics.Raycast(ray, out hit, interactLayer))
+            {
+                if (hit.transform.tag == "Interactable")
+                {
+                    if (!hit.transform.GetChild(0).gameObject.activeInHierarchy)
+                        return;
+                    AU_Interactable temp = hit.transform.GetComponent<AU_Interactable>();
+                    temp.PlayMiniGame();
+                }
+            }
+        }
     }
 }
