@@ -21,11 +21,15 @@ public class AU_PlayerController : MonoBehaviour
     static Color myColor;
     SpriteRenderer myAvatarSprite;
 
+    //Player Hat
+    static Sprite myHatSprite;
+    SpriteRenderer myHatHolder;
+
     // Роли игроков
     [SerializeField] bool isImposter;
     [SerializeField] InputAction KILL;
 
-    //float killInput
+    //float killInput // Почему закоменчено???
     
     List<AU_PlayerController> targets;
 
@@ -83,23 +87,26 @@ public class AU_PlayerController : MonoBehaviour
         {
             localPlayer = this;
         }
-
+        // myCamera = transform.GetChild(1).GetComponent<Camera>();
         targets = new List<AU_PlayerController>();
-
         myRb = GetComponent<Rigidbody>();
         myAvatar = transform.GetChild(0);
         myAnim = GetComponent<Animator>();
         myAvatarSprite = myAvatar.GetComponent<SpriteRenderer>();
-        if(myColor == Color.clear)
-            myColor = Color.white;
+        myHatHolder = myAvatar.GetChild(1).GetComponent<SpriteRenderer>();
         if (!hasControl)
             return;
+        if (myColor == Color.clear)
+            myColor = Color.white;
         myAvatarSprite.color =  myColor;
 
 
         allBodies = new List<Transform>();
 
         bodiesFound = new List<Transform>();
+
+        if (myHatSprite != null)
+            myHatHolder.sprite = myHatSprite;
     }
 
     // Update is called once per frame
@@ -138,6 +145,12 @@ public class AU_PlayerController : MonoBehaviour
         {
             myAvatarSprite.color = myColor;
         }
+    }
+
+    public void SetHat(Sprite newHat)
+    {
+        myHatSprite = newHat;
+        myHatHolder.sprite = myHatSprite;
     }
 
     public void SetRole(bool newRole)
