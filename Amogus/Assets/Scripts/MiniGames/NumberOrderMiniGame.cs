@@ -30,22 +30,31 @@ public class NumberOrderMiniGame : MonoBehaviour
         if (button == nextButton)
         {
             nextButton++;
-            Debug.Log("Next Button" + nextButton);
+            Debug.Log("Next Button: " + nextButton);
+            if (button == 9)
+            {
+                Debug.Log("Successfully!");
+                nextButton = 0;
+                ButtonOrderPanelClose();
+            }
         }
         else
         {
             Debug.Log("Failed");
-            Debug.Log("Next Button" + nextButton);
+            Debug.Log("Next Button: " + nextButton);
             nextButton = 0;
             OnEnable();
         }
         
-        if (button == 9 && button == nextButton)
-        {
-            Debug.Log("Pass");
-            nextButton = 0;
-            ButtonOrderPanelClose();
-        }
+        //if (button == 9)
+        //{
+        //    if (nextButton == 10)
+        //    {
+        //        Debug.Log("Pass");
+        //        nextButton = 0;
+        //        ButtonOrderPanelClose();
+        //    }
+        //}
     }
 
     public void ButtonOrderPanelClose()

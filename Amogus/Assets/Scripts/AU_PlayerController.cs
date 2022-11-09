@@ -77,6 +77,8 @@ public class AU_PlayerController : MonoBehaviour
         WASD.Disable();
         KILL.Disable();
         REPORT.Disable();
+        MOUSE.Disable();
+        INTERACTION.Disable();
     }
     
 
@@ -87,7 +89,7 @@ public class AU_PlayerController : MonoBehaviour
         {
             localPlayer = this;
         }
-        // myCamera = transform.GetChild(1).GetComponent<Camera>();
+        myCamera = transform.GetChild(2).GetComponent<Camera>();
         targets = new List<AU_PlayerController>();
         myRb = GetComponent<Rigidbody>();
         myAvatar = transform.GetChild(0);
