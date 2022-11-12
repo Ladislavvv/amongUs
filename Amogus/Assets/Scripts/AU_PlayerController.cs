@@ -1,9 +1,11 @@
+using Photon.Pun;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-public class AU_PlayerController : MonoBehaviour
+public class AU_PlayerController : MonoBehaviour, IPunObservable
 {
     [SerializeField] bool hasControl;
     public static AU_PlayerController localPlayer;
@@ -16,6 +18,8 @@ public class AU_PlayerController : MonoBehaviour
     [SerializeField] InputAction WASD;
     Vector2 movementInput;
     [SerializeField] float movementSpeed;
+
+    float direction = 1;
 
     // Смена цвета скина
     static Color myColor;
@@ -55,6 +59,11 @@ public class AU_PlayerController : MonoBehaviour
     [SerializeField] InputAction INTERACTION;
     [SerializeField] LayerMask interactLayer;
 
+    //Networking
+    PhotonView myPV;
+    [SerializeField] GameObject Light2D;
+    //[SerializeField] lightcaster myLightCaster;
+
 
     private void Awake()
     {
@@ -85,7 +94,9 @@ public class AU_PlayerController : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        if(hasControl)
+        myPV = GetComponent<PhotonView>();
+
+        if(myPV.IsMine)
         {
             localPlayer = this;
         }
@@ -96,14 +107,24 @@ public class AU_PlayerController : MonoBehaviour
         myAnim = GetComponent<Animator>();
         myAvatarSprite = myAvatar.GetComponent<SpriteRenderer>();
         myHatHolder = myAvatar.GetChild(1).GetComponent<SpriteRenderer>();
-        if (!hasControl)
+        if (!myPV.IsMine)
+        {
+            myCamera.gameObject.SetActive(false);
+            Light2D.SetActive(false);
+            // myLightCaster.enabled = false;
             return;
+        }
+
         if (myColor == Color.clear)
             myColor = Color.white;
         myAvatarSprite.color =  myColor;
 
 
-        allBodies = new List<Transform>();
+        //allBodies = new List<Transform>();
+        if (allBodies == null)
+        {
+            allBodies = new List<Transform>();
+        }
 
         bodiesFound = new List<Transform>();
 
@@ -114,7 +135,9 @@ public class AU_PlayerController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (!hasControl)
+        myAvatar.localScale = new Vector2(direction, 1);// поворот скина сихронизация
+
+        if (!myPV.IsMine)
             return;
 
         // включаем анимацию бега при движении
@@ -123,7 +146,8 @@ public class AU_PlayerController : MonoBehaviour
         if (movementInput.x != 0)
         {
             // поворачиваем спрайт на 180* если бежим в другую сторону
-            myAvatar.localScale = new Vector2(Mathf.Sign(movementInput.x), 1);
+            //myAvatar.localScale = new Vector2(Mathf.Sign(movementInput.x), 1);
+            direction = Mathf.Sign(movementInput.x);
         }
 
         // если кл-во тел > 0, то включаем поиск тела
@@ -132,11 +156,30 @@ public class AU_PlayerController : MonoBehaviour
             BodySearch();
         }
 
+        /////
+        /////
+        /////не показал
+        if (REPORT.triggered)
+        {
+            if (bodiesFound.Count == 0)
+                return;
+            Transform tempBody = bodiesFound[bodiesFound.Count - 1];
+            allBodies.Remove(tempBody);
+            bodiesFound.Remove(tempBody);
+            tempBody.GetComponent<AU_Body>().Report();
+        }
+        ////////
+        ////////
+        ////////
+
+
         mousePositionInput = MOUSE.ReadValue<Vector2>();
     }
 
     private void FixedUpdate() 
     {
+        if (!myPV.IsMine)
+            return;
         myRb.velocity = movementInput * movementSpeed;
     }
 
@@ -193,7 +236,12 @@ public class AU_PlayerController : MonoBehaviour
 
     void KillTarget(InputAction.CallbackContext context)
     {
-        if(context.phase == InputActionPhase.Performed)
+        if (!myPV.IsMine)
+            return;
+        if (!isImposter)
+            return;
+
+        if (context.phase == InputActionPhase.Performed)
         {
             if (targets.Count == 0)
                 return;
@@ -202,22 +250,34 @@ public class AU_PlayerController : MonoBehaviour
                 if (targets[targets.Count-1].isDead)
                     return;
                 transform.position = targets[targets.Count - 1].transform.position;
-                targets[targets.Count - 1].Die();
+                //targets[targets.Count - 1].Die();
+                targets[targets.Count - 1].myPV.RPC("RPC_Kill", RpcTarget.All);
                 targets.RemoveAt(targets.Count - 1);
             }
         }
     }
 
+    [PunRPC]
+    public void RPC_Kill()
+    {
+        Die();
+    }
+
+
     private void Die()
     {
+        if (!myPV.IsMine)
+            return;
+
+        //AU_Body tempBody = Instantiate(bodyPrefab, transform.position, transform.rotation).GetComponent<AU_Body>();
+        AU_Body tempBody = PhotonNetwork.Instantiate(Path.Combine("PhotonPrefabs", "AU_Body"), transform.position, transform.rotation).GetComponent<AU_Body>();
+        tempBody.SetColor(myAvatarSprite.color);
+
         isDead = true;
 
         myAnim.SetBool("isDead", isDead);
         myCollider.enabled = false;
         gameObject.layer = 9;
-
-        AU_Body tempBody = Instantiate(bodyPrefab, transform.position, transform.rotation).GetComponent<AU_Body>();
-        tempBody.SetColor(myAvatarSprite.color);
     }
 
     void BodySearch()
@@ -232,8 +292,8 @@ public class AU_PlayerController : MonoBehaviour
 
                 if(hit.transform == body)
                 {
-                    //Debug.Log(hit.transform.name);
-                    //Debug.Log(bodiesFound.Count);
+                    Debug.Log(hit.transform.name);
+                    Debug.Log(bodiesFound.Count);
                     if (bodiesFound.Contains(body.transform))
                         return;
                     bodiesFound.Add(body.transform);
@@ -246,6 +306,7 @@ public class AU_PlayerController : MonoBehaviour
         }
     }
 
+    //ReportBody он переделал, ее тут нет, на в Start() вроде 
     private void ReportBody(InputAction.CallbackContext obj)
     {
         if (bodiesFound == null)
@@ -275,6 +336,30 @@ public class AU_PlayerController : MonoBehaviour
                     temp.PlayMiniGame();
                 }
             }
+        }
+    }
+
+    public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info)
+    {
+        //throw new System.NotImplementedException();
+        if (stream.IsWriting)
+        {
+            stream.SendNext(direction);
+            stream.SendNext(isImposter);
+        }
+        else
+        {
+            //direction = (float)stream.ReceiveNext();
+            this.direction = (float)stream.ReceiveNext();
+            this.isImposter = (bool)stream.ReceiveNext();
+        }
+    }
+
+    public void BecomeImposter(int ImposterNumber)
+    {
+        if(PhotonNetwork.LocalPlayer == PhotonNetwork.PlayerList[ImposterNumber])
+        {
+            isImposter = true;
         }
     }
 }
