@@ -6,6 +6,8 @@ using UnityEngine.UI;
 
 public class AU_CharacterCustomizer : MonoBehaviour
 {
+    [SerializeField] GameObject Panel;
+
     [SerializeField] Color[] allColors;
     [SerializeField] Sprite[] allHats;
 
@@ -13,6 +15,7 @@ public class AU_CharacterCustomizer : MonoBehaviour
     [SerializeField] GameObject hatPanel;
     [SerializeField] Button colorTabButton;
     [SerializeField] Button hatTabButton;
+    //[SerializeField] Button closeButton;
 
     public void SetColor(int colorIndex)
     {
@@ -43,5 +46,10 @@ public class AU_CharacterCustomizer : MonoBehaviour
         hatPanel.SetActive(true);
         colorTabButton.interactable = true;
         hatTabButton.interactable = false;
+    }
+
+    public void SetOffPanel()
+    {
+        Panel.SetActive(false);
     }
 }

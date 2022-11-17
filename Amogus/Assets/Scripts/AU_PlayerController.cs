@@ -276,8 +276,8 @@ public class AU_PlayerController : MonoBehaviour, IPunObservable
         isDead = true;
 
         myAnim.SetBool("isDead", isDead);
-        myCollider.enabled = false;
         gameObject.layer = 9;
+        myCollider.enabled = false;
     }
 
     void BodySearch()
@@ -359,6 +359,7 @@ public class AU_PlayerController : MonoBehaviour, IPunObservable
     {
         if(PhotonNetwork.LocalPlayer == PhotonNetwork.PlayerList[ImposterNumber])
         {
+            //Debug.Log("PlayerList(ImposterNumber):");
             isImposter = true;
         }
     }
