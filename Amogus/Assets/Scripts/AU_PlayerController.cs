@@ -357,10 +357,12 @@ public class AU_PlayerController : MonoBehaviour, IPunObservable
 
     public void BecomeImposter(int ImposterNumber)
     {
-        if(PhotonNetwork.LocalPlayer == PhotonNetwork.PlayerList[ImposterNumber])
+        Debug.Log("In AU_PC BecomeImposter,ImposterNumber: " + ImposterNumber);
+        if(PhotonNetwork.LocalPlayer == PhotonNetwork.PlayerList[ImposterNumber - 1])
         {
-            //Debug.Log("PlayerList(ImposterNumber):");
+            Debug.Log("PlayerList(ImposterNumber):" + ImposterNumber);
             isImposter = true;
+            Debug.Log("isImposter activated");
         }
     }
 }
